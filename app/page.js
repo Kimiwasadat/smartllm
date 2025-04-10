@@ -7,6 +7,7 @@ import "@fontsource/inter/600.css";
 import Image from "next/image";
 import {Button, AppBar, Box, Paper, Stack} from  '@mui/material'
 import HomeScreen from '@/components/HomeScreen'
+import PricingScreen from '@/components/PricingScreen'
 
 
 export default function Home() {
@@ -16,7 +17,7 @@ export default function Home() {
       <Stack style={{alignItems:"center"}}>
         <HomeScreen />
       </Stack>
-    
+    <PricingScreen />
     </>
   );
 }
