@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { Typed } from 'react-typed';
+import Features from '@/components/Features';
 import NavBar from '@/components/NavBar';
 import "@fontsource/inter"; // Defaults to weight 400
 import "@fontsource/inter/600.css";
@@ -16,7 +17,9 @@ export default function Home() {
     <NavBar />
       <Stack style={{alignItems:"center"}}>
         <HomeScreen />
+        <Features />
       </Stack>
+  
     <PricingScreen />
     </>
   );

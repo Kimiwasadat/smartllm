@@ -1,6 +1,6 @@
 'use client';              // MUI needs this
 
-import { Button, Box, Paper, Stack, ButtonGroup } from '@mui/material';
+import { Button, Box, Paper, Stack, ButtonGroup, Link } from '@mui/material';
 import { blue } from '@mui/material/colors';
 import "@fontsource/inter"; // Defaults to weight 400
 import "@fontsource/inter/600.css";
@@ -29,9 +29,9 @@ export default function NavBar(){
     
         </ButtonGroup>
         <Box sx={{ flexGrow: 1 }} />
-        <Stack direction="row" sx={{justifyContent: 'flex-end' }}>
-          <Button varaint="contained" size ="small" sx={{bgcolor: '#4F46E5', '&:hover': { bgcolor: '#689f38' }, color:"#F9FAFB", borderRadius: 999, padding:"2px 16px"}}>Sign Up</Button>
-          <Button varaint="outlined"sx={{color:"#F9FAFB"}}>Sign In</Button>
+        <Stack direction="row" sx={{justifyContent: 'flex-end', padding: "15px 10px"}}>
+        <Link href="/signUp"  passhref ><Button varaint="contained" size ="small" sx={{bgcolor: '#4F46E5', '&:hover': { bgcolor: '#689f38' }, color:"#F9FAFB", padding:"10px 16px"}}>Sign Up</Button></Link>
+         <Link  href="/signIn"  passhref >  <Button varaint="outlined"sx={{color:"#F9FAFB", padding:"9px 10px"}}>Sign In</Button></Link>
         </Stack>
         </Stack>
       </Paper>
