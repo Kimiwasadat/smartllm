@@ -19,7 +19,6 @@ export default function Home() {
         <HomeScreen />
         <Features />
       </Stack>
-  
     <PricingScreen />
     </>
   );

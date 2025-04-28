@@ -6,7 +6,7 @@ export default function SignInPage() {
             <Toolbar>
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}> SmartLLM</Typography>
                 <Link href='/signUp' sx={{bgcolor: '#4F46E5', '&:hover': { bgcolor: '#689f38' }, color:"#F9FAFB", borderRadius:0, padding:"2px 16px"}} passHref><Button varaint="contained" sx={{ color:"#F9FAFB", borderRadius:0, }}>Sign Up</Button></Link>
-            <Link href='/signIn' passHref><Button varaint="outlined"sx={{color:"#F9FAFB"}}>Sign In</Button></Link>
+            <Link href='/signIn' passhref="true"><Button varaint="outlined"sx={{color:"#F9FAFB"}}>Sign In</Button></Link>
             
             </Toolbar>
             </AppBar>

@@ -1,6 +1,7 @@
 'use client'
-import {Box, Paper, Button, Stack, Typography} from '@mui/material'
+import {Box, Paper, Button, Stack, Typography, Link} from '@mui/material'
 import CheckIcon from '@mui/icons-material/CheckCircle';
+
 
 
 export default function PricingScreen(){
@@ -29,7 +30,7 @@ export default function PricingScreen(){
                     <CheckIcon color="success" />
                     <Typography>Submit every 3 minutes (cooldown)</Typography>
                 </Box>
-                <Button sx={{alignContent:'center'}}>Start here</Button>
+                <Link href="/signUp" passhref="true"><Button sx={{alignContent:'center'}}>Start here</Button></Link>
             </Box>
             </Paper>
             <Paper sx={{p:3, width:350}}>
@@ -51,7 +52,7 @@ export default function PricingScreen(){
                     <CheckIcon color="success" />
                     <Typography>Have the ability to collaborate on work with other users</Typography>
                 </Box>
-                <Button sx={{alignContent:'center'}}>Take me there</Button>
+                <Link  href="/textInput"  passhref="true"><Button sx={{alignContent:'center'}}>Take me there</Button></Link>
             </Box>
             </Paper>
             <Paper sx={{p:3, width:350}}>
