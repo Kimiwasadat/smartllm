@@ -1,13 +1,13 @@
 'use client'
 import {Box, Paper, Button, Stack, Typography, Link} from '@mui/material'
 import CheckIcon from '@mui/icons-material/CheckCircle';
-
+import { useRouter } from 'next/navigation';
 
 
 export default function PricingScreen(){
+    const router = useRouter();
     return(
         <>
-        
         <h1 style={{alignItems:'left'}}>Pricing</h1>
         <Stack direction= 'row' spacing={2}>
             <Box sx={{display:"flex", gap:3, justifyContent:'center', }}>
@@ -30,7 +30,7 @@ export default function PricingScreen(){
                     <CheckIcon color="success" />
                     <Typography>Submit every 3 minutes (cooldown)</Typography>
                 </Box>
-                <Link href="/signUp" passhref="true"><Button sx={{alignContent:'center'}}>Start here</Button></Link>
+                <Button sx={{alignContent:'center'}}  type="button" onClick={() => router.push('/auth/signUp')}>Start here</Button>
             </Box>
             </Paper>
             <Paper sx={{p:3, width:350}}>
@@ -52,7 +52,7 @@ export default function PricingScreen(){
                     <CheckIcon color="success" />
                     <Typography>Have the ability to collaborate on work with other users</Typography>
                 </Box>
-                <Link  href="/textInput"  passhref="true"><Button sx={{alignContent:'center'}}>Take me there</Button></Link>
+               <Button sx={{alignContent:'center'}} type="button"  onClick={() => router.push('/textInput')}>Take me there</Button>
             </Box>
             </Paper>
             <Paper sx={{p:3, width:350}}>

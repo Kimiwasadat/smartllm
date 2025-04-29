@@ -4,7 +4,9 @@ import { Button, Box, Paper, Stack, ButtonGroup, Link } from '@mui/material';
 import { blue } from '@mui/material/colors';
 import "@fontsource/inter"; // Defaults to weight 400
 import "@fontsource/inter/600.css";
+import { useRouter } from 'next/navigation';
 export default function NavBar(){
+  const router = useRouter();
     return(
       <Box>
       <Paper elevation={8} sx={{ bgcolor:' #1A1E2E',margin:3,padding:'0.5px'}}>
@@ -30,8 +32,8 @@ export default function NavBar(){
         </ButtonGroup>
         <Box sx={{ flexGrow: 1 }} />
         <Stack direction="row" sx={{justifyContent: 'flex-end', padding: "15px 10px"}}>
-        <Link href="/signUp"  passhref="true" ><Button varaint="contained" size ="small" sx={{bgcolor: '#4F46E5', '&:hover': { bgcolor: '#689f38' }, color:"#F9FAFB", padding:"10px 16px"}}>Sign Up</Button></Link>
-         <Link  href="/signIn"  passhref="true">  <Button varaint="outlined"sx={{color:"#F9FAFB", padding:"9px 10px"}}>Sign In</Button></Link>
+        <Button type="button" varaint="contained" size ="small" sx={{bgcolor: '#4F46E5', '&:hover': { bgcolor: '#689f38' }, color:"#F9FAFB", padding:"10px 16px"}} onClick={() => router.push('/auth/signUp')}>Sign Up</Button>
+        <Button type="button" varaint="outlined"sx={{color:"#F9FAFB", padding:"9px 10px"}} onClick={() => router.push('/auth/signIn')}>Sign In</Button>
         </Stack>
         </Stack>
       </Paper>

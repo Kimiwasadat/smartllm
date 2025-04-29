@@ -2,7 +2,6 @@
   "name": "smarttextllm",
   "version": "0.1.0",
   "private": true,
-  
   "scripts": {
     "dev": "concurrently \"npm run start:backend\" \"next dev --turbopack\"",
     "build": "next build",

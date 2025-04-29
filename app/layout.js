@@ -3,6 +3,7 @@ import "@fontsource/inter"; // Defaults to weight 400
 import "@fontsource/inter/600.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from 'next/font/google'
+import NavBar from '../components/NavBar';
 
 
 const inter = Inter({ subsets: ["latin"] });
