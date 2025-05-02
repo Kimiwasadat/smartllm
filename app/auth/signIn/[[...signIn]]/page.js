@@ -18,7 +18,7 @@ export default function SignInPage() {
                 <Typography variant="h4" sx={{fontWeight: 'italics', color: '3c3c3c', mt:5}}>Sign In</Typography>
             </Box>
             <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', mt: "30px"}}>
-                <SignIn />
+                <SignIn/>
             </Box>
         
         </Container>

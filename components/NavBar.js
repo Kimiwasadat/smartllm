@@ -5,6 +5,7 @@ import { blue } from '@mui/material/colors';
 import "@fontsource/inter"; // Defaults to weight 400
 import "@fontsource/inter/600.css";
 import { useRouter } from 'next/navigation';
+import {SignedIn, SignedOut, UserButton} from '@clerk/nextjs';
 export default function NavBar(){
   const router = useRouter();
     return(
@@ -32,8 +33,13 @@ export default function NavBar(){
         </ButtonGroup>
         <Box sx={{ flexGrow: 1 }} />
         <Stack direction="row" sx={{justifyContent: 'flex-end', padding: "15px 10px"}}>
+        <SignedOut>
         <Button type="button" varaint="contained" size ="small" sx={{bgcolor: '#4F46E5', '&:hover': { bgcolor: '#689f38' }, color:"#F9FAFB", padding:"10px 16px"}} onClick={() => router.push('/auth/signUp')}>Sign Up</Button>
         <Button type="button" varaint="outlined"sx={{color:"#F9FAFB", padding:"9px 10px"}} onClick={() => router.push('/auth/signIn')}>Sign In</Button>
+        </SignedOut>
+        <SignedIn>
+          <UserButton afterSignOutUrl="/" /> 
+        </SignedIn>
         </Stack>
         </Stack>
       </Paper>

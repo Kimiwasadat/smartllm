@@ -2,9 +2,11 @@
 import {Box, Paper, Button, Stack, Typography, Link} from '@mui/material'
 import CheckIcon from '@mui/icons-material/CheckCircle';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 
 export default function PricingScreen(){
+    const [plan, setPlan] = useState('free');
     const router = useRouter();
     return(
         <>
@@ -30,7 +32,7 @@ export default function PricingScreen(){
                     <CheckIcon color="success" />
                     <Typography>Submit every 3 minutes (cooldown)</Typography>
                 </Box>
-                <Button sx={{alignContent:'center'}}  type="button" onClick={() => router.push('/auth/signUp')}>Start here</Button>
+                <Button sx={{alignContent:'center'}}  type="button" onClick={() => {setPlan('free'); router.push(`/auth/signUp?plan=${plan}`);}}>Start here</Button>
             </Box>
             </Paper>
             <Paper sx={{p:3, width:350}}>
