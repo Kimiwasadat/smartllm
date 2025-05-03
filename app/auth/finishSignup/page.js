@@ -11,7 +11,7 @@ export default function FinishSignup() {
     useEffect(() => {
         if (isLoaded && user) {
             const role = SearchParams.get('role') || 'free';
-            fetch('/routes/api/set-role', {
+            fetch('/api/set-role', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
