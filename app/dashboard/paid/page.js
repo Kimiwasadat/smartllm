@@ -1,11 +1,16 @@
 import { redirect } from 'next/navigation';
-import { checkPaidAccess, ensureAuth } from '@/app/utils/auth';
+import { auth } from '@clerk/nextjs/server';
+import { checkPaidAccess } from '@/app/utils/auth';
 
 export default async function PaidDashboardPage() {
   try {
-    // First ensure user is authenticated
-    await ensureAuth();
-    console.log('🔑 User is authenticated');
+    // First check authentication
+    const { userId } = auth();
+    if (!userId) {
+      console.log('❌ No userId found, redirecting to sign in');
+      return redirect('/auth/signIn');
+    }
+    console.log('🔑 User is authenticated:', userId);
 
     // Then check for paid access
     const hasPaidAccess = await checkPaidAccess();
@@ -32,9 +37,6 @@ export default async function PaidDashboardPage() {
     );
   } catch (error) {
     console.error('❌ Error in paid dashboard:', error);
-    if (error.message === "Authentication required") {
-      return redirect('/auth/signIn');
-    }
     return redirect('/unauthorized');
   }
 }

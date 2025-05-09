@@ -1,25 +1,22 @@
-'use client';
-import { useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
+import { fetchUserRole } from '@/app/utils/auth';
 
-export default function FreeDashboardPage() {
-    const { user, isLoaded } = useUser();
-    const router = useRouter();
+export default async function FreeDashboardPage() {
+  try {
+    const { userId } = auth();
+    if (!userId) return redirect('/auth/signIn');
 
-    useEffect(() => {
-        if (isLoaded && user) {
-            const role = user.publicMetadata?.role;
-            if (role !== 'free') {
-                router.push('/unauthorized');
-            }
-        }
-    }, [isLoaded, user]);
+    const role = await fetchUserRole();
+    if (role !== 'free') return redirect('/unauthorized');
 
     return (
-        <main>
-            <h1>Free Dashboard</h1>
-            <p>Welcome, free user!</p>
-        </main>
+      <main>
+        <h1>Free Dashboard</h1>
+        <p>Welcome, free user!</p>
+      </main>
     );
+  } catch (error) {
+    return redirect('/unauthorized');
+  }
 }

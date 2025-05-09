@@ -24,10 +24,11 @@ export default function FinishSignup() {
           if (!res.ok) throw new Error('Failed to set role');
           
           console.log('✅ Role set successfully, redirecting to dashboard');
-          // Add a small delay to ensure the role is set
+          // Add a longer delay to ensure the role is set
           setTimeout(() => {
+            console.log(`➡️ Redirecting to /dashboard/${role}`);
             router.push(`/dashboard/${role}`);
-          }, 1000);
+          }, 2000);
         } catch (err) {
           console.error('❌ Error setting role:', err);
           router.push('/unauthorized');

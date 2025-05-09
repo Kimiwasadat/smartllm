@@ -1,8 +1,8 @@
-import { getAuth, currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export async function fetchUserRole() {
     try {
-        const { userId } = getAuth();
+        const { userId } = auth();
         console.log('🔑 Auth check - userId:', userId);
 
         if (!userId) {
@@ -54,7 +54,7 @@ export async function checkPaidAccess() {
 }
 
 export async function ensureAuth() {
-    const { userId } = getAuth();
+    const { userId } = auth();
     if (!userId) {
         throw new Error("Authentication required");
     }
