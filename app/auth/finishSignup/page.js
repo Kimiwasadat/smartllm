@@ -1,28 +1,50 @@
-'use client'
-import { useRouter } from 'next/navigation';
+'use client';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import  { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function FinishSignup() {
-    const SearchParams = useSearchParams();
-    const {user, isLoaded} = useUser();
-    const router = useRouter();
-    useEffect(() => {
-        if (isLoaded && user) {
-            const role = SearchParams.get('role') || 'free';
-            fetch('/api/set-role', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ userId: user.id,  role }),
-            });
+  const { user, isLoaded, isSignedIn } = useUser();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const assignRole = async () => {
+      if (isLoaded && user && isSignedIn) {
+        const role = searchParams.get('role') || 'free';
+        console.log('🎯 Setting role:', role, 'for user:', user.id);
+
+        try {
+          const res = await fetch('/api/set-role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, role }),
+          });
+
+          if (!res.ok) throw new Error('Failed to set role');
+          
+          console.log('✅ Role set successfully, redirecting to dashboard');
+          // Add a small delay to ensure the role is set
+          setTimeout(() => {
+            router.push(`/dashboard/${role}`);
+          }, 1000);
+        } catch (err) {
+          console.error('❌ Error setting role:', err);
+          router.push('/unauthorized');
         }
-    }, [user, isLoaded]);
-    return(
-        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
-        <h1>Thank you for signing up! Signing you in to your role, please wait...</h1>
-        </div>
-    )
+      } else if (isLoaded && !isSignedIn) {
+        console.log('❌ User not signed in, redirecting to sign in');
+        router.push('/auth/signIn');
+      }
+    };
+
+    assignRole();
+  }, [isLoaded, user, isSignedIn, router, searchParams]);
+
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h1>Setting up your account...</h1>
+      <p>Please wait while we configure your access.</p>
+    </div>
+  );
 }

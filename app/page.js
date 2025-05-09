@@ -12,6 +12,7 @@ import PricingScreen from '@/components/PricingScreen'
 import DistinctFeatures from '@/components/DistinctFeatures'
 
 
+
 export default function Home() {
   return (
     <>

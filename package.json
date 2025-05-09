@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@clerk/clerk-js": "^5.62.0",
-    "@clerk/nextjs": "^6.18.0",
+    "@clerk/clerk-sdk-node": "^4.13.23",
+    "@clerk/nextjs": "^6.19.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/inter": "^5.2.5",
@@ -32,6 +33,7 @@
     "@tailwindcss/postcss": "^4",
     "concurrently": "^9.1.2",
     "nodemon": "^3.1.10",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "typescript": "5.8.3"
   }
 }
