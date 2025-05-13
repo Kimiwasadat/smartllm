@@ -2,6 +2,7 @@
 import React, {useEffect, useRef} from 'react';
 import { Typed } from 'react-typed';
 import {Button, Paper, Box, Stack} from '@mui/material'
+import { useRouter } from 'next/navigation';
 
 const TypedComponent = () =>{
     const elRef = useRef(null);
@@ -26,8 +27,10 @@ const TypedComponent = () =>{
     }, []);
   
     return <span ref={elRef} />;
+  
   };
 export default function HomeScreen(){
+    const router = useRouter();
     return (
         <>
         <h1>Welcome to SmartLLM</h1>
@@ -35,7 +38,8 @@ export default function HomeScreen(){
         <Paper elevation={0} sx={{ alignItems:'center', backgroundColor: 'transparent', boxShadow: 'none', marginTop:5}}>
           <Stack direction='row' spacing={2}>
             <Box sx={{alignItems:'center'}}>
-                <Button variant="contained" color="primary">Get Started</Button>
+                
+                <Button variant="contained" color="primary" onClick={() => router.push('/textInput')}>Get Started</Button>
                 <Button variant ="outlined" color="secondary" sx={{marginLeft: 2}}>Learn More</Button>
             </Box>
           </Stack>

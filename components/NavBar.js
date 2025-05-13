@@ -29,6 +29,7 @@ export default function NavBar(){
         <Button variant="text" sx={{color: '#F9FAFB',}}>Features</Button>
         <Button variant="text" sx={{color: '#F9FAFB',}}>Review</Button>
         <Button variant="text" sx={{color: '#F9FAFB',}}>Pricing</Button>
+        <Button variant="text" sx={{color: '#F9FAFB',}} onClick={() => router.push('/textInput')}>Text Editor</Button>
     
         </ButtonGroup>
         <Box sx={{ flexGrow: 1 }} />

@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser, signOut } from "@clerk/nextjs/server";
 
 export async function fetchUserRole() {
     try {
@@ -14,6 +14,7 @@ export async function fetchUserRole() {
         console.log('👤 User data:', {
             id: user?.id,
             role: user?.publicMetadata?.role,
+            canAccess: user?.publicMetadata?.canAccess,
             email: user?.emailAddresses?.[0]?.emailAddress
         });
 
@@ -50,6 +51,63 @@ export async function checkPaidAccess() {
     } catch (error) {
         console.error("❌ Error checking paid access:", error);
         return false;
+    }
+}
+
+export async function checkCanAccess() {
+    try {
+        const { userId } = auth();
+        if (!userId) {
+            console.log('❌ No userId found');
+            return false;
+        }
+
+        const user = await currentUser();
+        if (!user) {
+            console.log('❌ No user found');
+            return false;
+        }
+
+        const role = user.publicMetadata?.role;
+        const canAccess = user.publicMetadata?.canAccess;
+
+        // If user is admin, they always have access
+        if (role === 'admin') {
+            console.log('✅ Admin user has access');
+            return true;
+        }
+
+        // For non-admin users, check canAccess metadata
+        if (canAccess === true) {
+            console.log('✅ User has canAccess permission');
+            return true;
+        }
+
+        // If canAccess is false, sign out the user
+        if (canAccess === false) {
+            console.log('❌ User access revoked, signing out...');
+            await signOut();
+            return false;
+        }
+
+        console.log('❌ User does not have canAccess permission');
+        return false;
+    } catch (error) {
+        console.error('❌ Error checking canAccess:', error);
+        return false;
+    }
+}
+
+export async function checkDashboardAccess() {
+    try {
+        const hasAccess = await checkCanAccess();
+        if (!hasAccess) {
+            throw new Error("Access denied");
+        }
+        return true;
+    } catch (error) {
+        console.error('❌ Dashboard access denied:', error);
+        throw error;
     }
 }
 
