@@ -35,7 +35,9 @@ export default function TextInput(){
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             userId: user.id,
-                            canAccess: true
+                            role: user.publicMetadata?.role,
+                            canAccess: true,
+                            tokens: user.publicMetadata?.tokens
                         }),
                     });
                 } catch (error) {
@@ -51,7 +53,9 @@ export default function TextInput(){
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             userId: user.id,
-                            canAccess: true
+                            role: user.publicMetadata?.role,
+                            canAccess: true,
+                            tokens: user.publicMetadata?.tokens
                         }),
                     });
                 } catch (error) {
@@ -227,6 +231,7 @@ export default function TextInput(){
                         body: JSON.stringify({
                             userId: user.id,
                             role: 'paid',
+                            canAccess: true,
                             tokens: newTokenCount
                         }),
                     });
