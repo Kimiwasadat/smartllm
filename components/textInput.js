@@ -125,11 +125,13 @@ export default function TextInput(){
     }, [user, signOut, router, isInCooldown]);
 
     useEffect(() => {
-        // Set initial tokens based on user role
         if (user?.publicMetadata?.role === 'paid') {
-            setAvailableTokens(1000); // Paid users start with 1000 tokens
+            const tokens = Number(user.publicMetadata.tokens);
+            setAvailableTokens(
+                tokens && tokens > 0 ? tokens : 40 // Default for new paid users
+            );
         } else {
-            setAvailableTokens(20); // Free users get 20 words
+            setAvailableTokens(20);
         }
     }, [user]);
 
@@ -216,7 +218,32 @@ export default function TextInput(){
             
             // Update tokens and submission time
             if (user?.publicMetadata?.role === 'paid') {
-                setAvailableTokens(availableTokens - wordCount);
+                const newTokenCount = availableTokens - wordCount;
+                // Update Clerk metadata first
+                try {
+                    const res = await fetch('/api/set-role', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: user.id,
+                            role: 'paid',
+                            tokens: newTokenCount
+                        }),
+                    });
+                    if (res.ok) {
+                        setAvailableTokens(newTokenCount);
+                    } else {
+                        console.error('Failed to update tokens in Clerk:', await res.text());
+                        setError('Failed to update tokens in Clerk. Please try again.');
+                        setLoading(false);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Failed to update tokens in Clerk:', error);
+                    setError('Failed to update tokens in Clerk. Please try again.');
+                    setLoading(false);
+                    return;
+                }
             }
             setLastSubmissionTime(Date.now());
         } catch (error) {

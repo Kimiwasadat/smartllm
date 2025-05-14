@@ -32,33 +32,29 @@ export default function TokenPackages() {
 
     try {
       setLoading(true);
-      const response = await fetch('/api/create-checkout-session', {
+      const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ priceId: packageId }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        const error = await response.json();
+        throw new Error(error.error || 'Network response was not ok');
       }
 
-      const { sessionId } = await response.json();
-      const stripe = await getStripe();
-      
-      if (!stripe) {
-        throw new Error('Stripe failed to load');
-      }
-
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-      
-      if (error) {
-        throw error;
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
       }
     } catch (error) {
       console.error('Purchase error:', error);
-      alert('Failed to process payment. Please try again.');
+      alert(error.message || 'Failed to process payment. Please try again.');
     } finally {
       setLoading(false);
     }
