@@ -265,12 +265,73 @@ export default function TextInput(){
         setError('');
     }
 
-    const handleDownload = () => {
-        const blob = new Blob([correction], { type: 'text/plain' });
+    const handleDownload = async (type = 'corrected') => {
+        // Check if user is paid and has enough tokens
+        if (user?.publicMetadata?.role === 'paid') {
+            if (availableTokens < 5) {
+                setError('Insufficient tokens for download. You need 5 tokens to download.');
+                return;
+            }
+
+            // Update tokens in Clerk
+            try {
+                const newTokenCount = availableTokens - 5;
+                const res = await fetch('/api/set-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        role: 'paid',
+                        canAccess: true,
+                        tokens: newTokenCount
+                    }),
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to update tokens');
+                }
+
+                // Update local state
+                setAvailableTokens(newTokenCount);
+            } catch (error) {
+                console.error('Failed to update tokens for download:', error);
+                setError('Failed to process download. Please try again.');
+                return;
+            }
+        }
+
+        let content = '';
+        let filename = '';
+        
+        switch(type) {
+            case 'corrected':
+                content = correction;
+                filename = 'corrected_text.txt';
+                break;
+            case 'original':
+                content = text;
+                filename = 'original_text.txt';
+                break;
+            case 'both':
+                content = `Original Text:\n${text}\n\nCorrected Text:\n${correction}`;
+                filename = 'text_comparison.txt';
+                break;
+            case 'highlighted':
+                content = highlightedText;
+                filename = 'highlighted_changes.html';
+                break;
+            default:
+                content = correction;
+                filename = 'corrected_text.txt';
+        }
+
+        const blob = new Blob([content], { 
+            type: type === 'highlighted' ? 'text/html' : 'text/plain' 
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'corrected_text.txt';
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -300,7 +361,7 @@ export default function TextInput(){
                 fullWidth
             />
             
-            <Box display="flex" gap={2} alignItems="center">
+            <Box display="flex" gap={2}>
                 <Input
                     type="file"
                     onChange={handleFileUpload}
@@ -326,17 +387,44 @@ export default function TextInput(){
                     {loading ? "Processing..." : "Submit"}
                 </Button>
                 <Button variant='contained' color="secondary" onClick={handleClear}>Clear</Button>
-                {correction && (
-                    <Button variant='contained' color="success" onClick={handleDownload}>
-                        Download Corrected Text
-                    </Button>
-                )}
             </Box>
 
-            {highlightedText && (
+            {correction && (
                 <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
                     <Typography variant="h6" gutterBottom>Corrected Text (Yellow highlights show changes):</Typography>
                     <div dangerouslySetInnerHTML={{ __html: highlightedText }} />
+                    
+                    <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                        <Typography variant="subtitle1">Download Options:</Typography>
+                        <Button 
+                            variant="outlined" 
+                            size="small" 
+                            onClick={() => handleDownload('corrected')}
+                        >
+                            Corrected Text
+                        </Button>
+                        <Button 
+                            variant="outlined" 
+                            size="small" 
+                            onClick={() => handleDownload('original')}
+                        >
+                            Original Text
+                        </Button>
+                        <Button 
+                            variant="outlined" 
+                            size="small" 
+                            onClick={() => handleDownload('both')}
+                        >
+                            Both Texts
+                        </Button>
+                        <Button 
+                            variant="outlined" 
+                            size="small" 
+                            onClick={() => handleDownload('highlighted')}
+                        >
+                            Highlighted Changes
+                        </Button>
+                    </Box>
                 </Box>
             )}
         </Box>

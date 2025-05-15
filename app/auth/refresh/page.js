@@ -1,21 +1,24 @@
 'use client';
-import { useClerk } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function RefreshPage() {
-  const { signOut } = useClerk();
+  const { user, isLoaded } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/dashboard/paid';
 
   useEffect(() => {
-    const refresh = async () => {
-      await signOut();
-      router.push('/auth/signIn?redirect=' + redirectUrl);
+    const doRefresh = async () => {
+      if (isLoaded && user) {
+        // Reload the user to get the latest metadata from Clerk
+        await user.reload();
+        router.replace(redirectUrl);
+      }
     };
-    refresh();
-  }, [signOut, router, redirectUrl]);
+    doRefresh();
+  }, [user, isLoaded, router, redirectUrl]);
 
-  return <div>Refreshing your session...</div>;
+  return <div>Refreshing your account...</div>;
 } 

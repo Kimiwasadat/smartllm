@@ -1,6 +1,6 @@
 'use client';
 import { AppBar, Container, Toolbar, Typography, Button, Box, Paper, Alert } from '@mui/material';
-import { SignIn } from '@clerk/nextjs';
+import { SignIn, useUser } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import "@fontsource/inter";
@@ -11,6 +11,8 @@ export default function SignInPage() {
   const plan = searchParams.get('plan') || 'free';
   const [cooldownError, setCooldownError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
+  const { user, isLoaded } = useUser();
+  const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
     const error = searchParams.get('error');
@@ -20,6 +22,13 @@ export default function SignInPage() {
       setCooldownError('Your access has been revoked. Please contact support if you believe this is an error.');
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (isLoaded && user?.publicMetadata?.role === 'suspended') {
+      setSuspended(true);
+      window.location.href = '/sign-out';
+    }
+  }, [isLoaded, user]);
 
   const handleBeforeSignIn = async (e) => {
     if (isChecking) return false;
@@ -51,6 +60,14 @@ export default function SignInPage() {
       setIsChecking(false);
     }
   };
+
+  if (suspended) {
+    return (
+      <div style={{ color: 'red', textAlign: 'center', marginTop: 40 }}>
+        Your account has been suspended. Please contact the administrator.
+      </div>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ paddingTop: 10 }}>

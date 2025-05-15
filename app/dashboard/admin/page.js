@@ -1,103 +1,272 @@
 'use client';
-import { useState } from 'react';
 
-export default function AdminDashboardPage() {
-  const [blacklistedUsers, setBlacklistedUsers] = useState([]);
-  const [complaints, setComplaints] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
+import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import {
+    Box,
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    Button,
+    TextField,
+    Tabs,
+    Tab,
+    Card,
+    CardContent,
+    Alert,
+    Snackbar
+} from '@mui/material';
 
-  // Mock data - in real app would fetch from API
-  const users = [
-    { id: 1, name: 'User 1', email: 'user1@example.com', status: 'active' },
-    { id: 2, name: 'User 2', email: 'user2@example.com', status: 'blacklisted' }
-  ];
+export default function AdminDashboard() {
+    const { user, isLoaded } = useUser();
+    const router = useRouter();
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [tokenAmount, setTokenAmount] = useState('');
+    const [activeTab, setActiveTab] = useState(0);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const mockComplaints = [
-    { id: 1, userId: 1, description: 'Inappropriate content', status: 'pending' },
-    { id: 2, userId: 2, description: 'Spam messages', status: 'resolved' }
-  ];
+    useEffect(() => {
+        if (isLoaded && user?.publicMetadata?.role !== 'admin') {
+            router.push('/');
+        }
+    }, [isLoaded, user, router]);
 
-  const handleBlacklist = (userId) => {
-    setBlacklistedUsers([...blacklistedUsers, userId]);
-  };
+    useEffect(() => {
+        fetchUsers();
+        const interval = setInterval(fetchUsers, 5000); // Poll every 5 seconds
+        return () => clearInterval(interval);
+    }, []);
 
-  const handleRemoveBlacklist = (userId) => {
-    setBlacklistedUsers(blacklistedUsers.filter(id => id !== userId));
-  };
+    const fetchUsers = async () => {
+        try {
+            const response = await fetch('/api/admin/users');
+            const data = await response.json();
+            setUsers(data);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            setSnackbar({
+                open: true,
+                message: 'Failed to fetch users',
+                severity: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleResolveComplaint = (complaintId) => {
-    setComplaints(complaints.map(complaint => 
-      complaint.id === complaintId 
-        ? {...complaint, status: 'resolved'}
-        : complaint
-    ));
-  };
+    const handleSuspendUser = async (userId) => {
+        try {
+            const response = await fetch('/api/admin/suspend-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            });
 
-  return (
-    <main className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Admin Dashboard</h1>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">User Management</h2>
-            <div className="space-y-4">
-              {users.map(user => (
-                <div key={user.id} className="border p-4 rounded">
-                  <p><strong>Name:</strong> {user.name}</p>
-                  <p><strong>Email:</strong> {user.email}</p>
-                  <p><strong>Status:</strong> {user.status}</p>
-                  {user.status === 'active' ? (
-                    <button 
-                      onClick={() => handleBlacklist(user.id)}
-                      className="bg-red-500 text-white px-4 py-2 rounded mt-2"
-                    >
-                      Blacklist User
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleRemoveBlacklist(user.id)}
-                      className="bg-green-500 text-white px-4 py-2 rounded mt-2"
-                    >
-                      Remove from Blacklist
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+            if (response.ok) {
+                setSnackbar({
+                    open: true,
+                    message: 'User suspended successfully',
+                    severity: 'success'
+                });
+                fetchUsers();
+            } else {
+                setSnackbar({
+                    open: true,
+                    message: 'Failed to suspend user',
+                    severity: 'error'
+                });
+            }
+        } catch (error) {
+            console.error('Error suspending user:', error);
+            setSnackbar({
+                open: true,
+                message: 'Failed to suspend user',
+                severity: 'error'
+            });
+        }
+    };
 
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Complaints</h2>
-            <div className="space-y-4">
-              {mockComplaints.map(complaint => (
-                <div key={complaint.id} className="border p-4 rounded">
-                  <p><strong>User ID:</strong> {complaint.userId}</p>
-                  <p><strong>Description:</strong> {complaint.description}</p>
-                  <p><strong>Status:</strong> {complaint.status}</p>
-                  {complaint.status === 'pending' && (
-                    <button
-                      onClick={() => handleResolveComplaint(complaint.id)}
-                      className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
-                    >
-                      Mark as Resolved
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+    const handleTokenDeduction = async (userId) => {
+        if (!tokenAmount || isNaN(tokenAmount) || tokenAmount <= 0) {
+            setSnackbar({
+                open: true,
+                message: 'Please enter a valid token amount',
+                severity: 'error'
+            });
+            return;
+        }
 
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Statistics</h2>
-            <div className="space-y-4">
-              <p><strong>Total Users:</strong> {users.length}</p>
-              <p><strong>Blacklisted Users:</strong> {blacklistedUsers.length}</p>
-              <p><strong>Active Complaints:</strong> {mockComplaints.filter(c => c.status === 'pending').length}</p>
-              <p><strong>Resolved Complaints:</strong> {mockComplaints.filter(c => c.status === 'resolved').length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+        try {
+            const response = await fetch('/api/admin/deduct-tokens', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    userId, 
+                    amount: parseInt(tokenAmount),
+                    reason: 'Admin deduction'
+                })
+            });
+
+            if (response.ok) {
+                setSnackbar({
+                    open: true,
+                    message: 'Tokens deducted successfully',
+                    severity: 'success'
+                });
+                setTokenAmount('');
+                fetchUsers();
+            } else {
+                setSnackbar({
+                    open: true,
+                    message: 'Failed to deduct tokens',
+                    severity: 'error'
+                });
+            }
+        } catch (error) {
+            console.error('Error deducting tokens:', error);
+            setSnackbar({
+                open: true,
+                message: 'Failed to deduct tokens',
+                severity: 'error'
+            });
+        }
+    };
+
+    const handleCloseSnackbar = () => {
+        setSnackbar({ ...snackbar, open: false });
+    };
+
+    if (!isLoaded || loading) {
+        return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            Loading...
+        </Box>;
+    }
+
+    return (
+        <Box sx={{ p: 3 }}>
+            <Typography variant="h4" gutterBottom>
+                Admin Dashboard
+            </Typography>
+
+            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
+                <Tab label="User Management" />
+                <Tab label="Token Management" />
+            </Tabs>
+
+            {activeTab === 0 && (
+                <Card>
+                    <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                            Paid Users
+                        </Typography>
+                        <TableContainer component={Paper}>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>Username</TableCell>
+                                        <TableCell>Role</TableCell>
+                                        <TableCell>Available Tokens</TableCell>
+                                        <TableCell>Status</TableCell>
+                                        <TableCell>Actions</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {users.map((user) => (
+                                        <TableRow key={user.id}>
+                                            <TableCell>{user.username}</TableCell>
+                                            <TableCell>{user.role}</TableCell>
+                                            <TableCell>{user.availableTokens}</TableCell>
+                                            <TableCell>{user.status}</TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                                    <Button
+                                                        variant="contained"
+                                                        color="error"
+                                                        onClick={() => handleSuspendUser(user.id)}
+                                                        disabled={user.status === 'suspended'}
+                                                    >
+                                                        Suspend
+                                                    </Button>
+                                                    <Button
+                                                        variant="outlined"
+                                                        onClick={() => setSelectedUser(user)}
+                                                    >
+                                                        Manage Tokens
+                                                    </Button>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeTab === 1 && (
+                <Card>
+                    <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                            Token Management
+                        </Typography>
+                        {selectedUser ? (
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="subtitle1" gutterBottom>
+                                    Managing tokens for: {selectedUser.username}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                                    <TextField
+                                        type="number"
+                                        label="Token Amount"
+                                        value={tokenAmount}
+                                        onChange={(e) => setTokenAmount(e.target.value)}
+                                        InputProps={{ inputProps: { min: 1 } }}
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => handleTokenDeduction(selectedUser.id)}
+                                    >
+                                        Deduct Tokens
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => setSelectedUser(null)}
+                                    >
+                                        Close
+                                    </Button>
+                                </Box>
+                            </Box>
+                        ) : (
+                            <Typography>
+                                Select a user to manage their tokens
+                            </Typography>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={6000}
+                onClose={handleCloseSnackbar}
+            >
+                <Alert
+                    onClose={handleCloseSnackbar}
+                    severity={snackbar.severity}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
+        </Box>
+    );
 }

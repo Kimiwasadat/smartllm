@@ -1,18 +1,35 @@
 'use client';
 import { AppBar, Container, Toolbar, Typography, Button, Box, Paper, Tabs, Tab } from '@mui/material';
-import { SignUp } from '@clerk/nextjs';
+import { SignUp, useUser } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import "@fontsource/inter";
 
 export default function SignUpPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [selectedPlan, setSelectedPlan] = useState(searchParams.get('plan') || 'free');
+    const { user, isLoaded } = useUser();
+    const [suspended, setSuspended] = useState(false);
+
+    useEffect(() => {
+        if (isLoaded && user?.publicMetadata?.role === 'suspended') {
+            setSuspended(true);
+            window.location.href = '/sign-out';
+        }
+    }, [isLoaded, user]);
 
     const handlePlanChange = (event, newValue) => {
         setSelectedPlan(newValue);
     };
+
+    if (suspended) {
+        return (
+            <div style={{ color: 'red', textAlign: 'center', marginTop: 40 }}>
+                Your account has been suspended. Please contact the administrator.
+            </div>
+        );
+    }
 
     return (
         <Container maxWidth="lg" sx={{ paddingTop: 10 }}>

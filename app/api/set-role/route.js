@@ -8,6 +8,18 @@ export async function POST(req) {
   }
 
   try {
+    // Fetch current metadata
+    const userRes = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
+      },
+    });
+    const user = await userRes.json();
+    const oldMetadata = user.public_metadata || {};
+
+    // Merge
+    const newMetadata = { ...oldMetadata, ...metadata };
+
     const response = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
       method: 'PATCH',
       headers: {
@@ -15,7 +27,7 @@ export async function POST(req) {
         'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
       },
       body: JSON.stringify({
-        public_metadata: metadata,
+        public_metadata: newMetadata,
       }),
     });
 

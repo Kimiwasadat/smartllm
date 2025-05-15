@@ -3,12 +3,29 @@ import { Box, Typography, Button, Paper, Container, Alert } from '@mui/material'
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import TokenPackages from '@/components/TokenPackages';
+import { useUser } from '@clerk/nextjs';
 
 export default function FreeDashboardPage() {
   const router = useRouter();
+  const { user, isLoaded } = useUser();
   const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
+
+  useEffect(() => {
+    if (isLoaded) {
+      const role = user?.publicMetadata?.role;
+      if (role !== 'free') {
+        if (role === 'paid') {
+          router.replace('/dashboard/paid');
+        } else if (role === 'admin') {
+          router.replace('/dashboard/admin');
+        } else {
+          router.replace('/');
+        }
+      }
+    }
+  }, [user, isLoaded, router]);
 
   useEffect(() => {
     // Check for success or error messages in URL
@@ -23,6 +40,10 @@ export default function FreeDashboardPage() {
       setTimeout(() => setShowError(false), 5000);
     }
   }, [searchParams]);
+
+  if (!isLoaded || user?.publicMetadata?.role !== 'free') {
+    return null; // or a loading spinner
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
