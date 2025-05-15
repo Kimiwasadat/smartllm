@@ -7,7 +7,6 @@ Please review the following text for grammar and spelling errors ONLY.
 Do not rewrite, restructure, or reword the sentences beyond what is necessary to fix grammatical or spelling mistakes.
 Keep the sentence structure, vocabulary, and style as close as possible to the original.
 If there are no grammar or spelling mistakes, return the text exactly as it is.
-
 Text:
 """
 ${inputtext}

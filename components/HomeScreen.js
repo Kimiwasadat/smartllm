@@ -44,7 +44,10 @@ export default function HomeScreen(){
         }
 
         const role = user.publicMetadata?.role;
-        if (role === 'paid') {
+        if (role === 'admin') {
+            // If admin user, go to admin dashboard
+            router.push('/dashboard/admin');
+        } else if (role === 'paid') {
             // If paid user, go directly to text input
             router.push('/textInput');
         } else {

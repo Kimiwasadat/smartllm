@@ -9,14 +9,13 @@ export default function TextInputPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoaded) {
-      if (user?.publicMetadata?.role !== 'paid') {
-        router.replace('/dashboard/free');
-      }
+    if (isLoaded && !user) {
+      // Only redirect if user is not logged in
+      router.replace('/auth/signIn');
     }
   }, [user, isLoaded, router]);
 
-  if (!isLoaded || user?.publicMetadata?.role !== 'paid') {
+  if (!isLoaded) {
     return null; // or a loading spinner
   }
 

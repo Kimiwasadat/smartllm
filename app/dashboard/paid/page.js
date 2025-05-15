@@ -3,10 +3,28 @@ import TokenPackages from '../../../components/TokenPackages';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { Box, Paper, Typography, Button, Grid, Card, CardContent } from '@mui/material';
+import { useEffect } from 'react';
 
 export default function PaidDashboardPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+
+  // Add authentication check
+  useEffect(() => {
+    if (isLoaded) {
+      const role = user?.publicMetadata?.role;
+      if (role !== 'paid') {
+        router.replace('/unauthorized');
+        return;
+      }
+    }
+  }, [user, isLoaded, router]);
+
+  // Show nothing while checking authentication
+  if (!isLoaded || user?.publicMetadata?.role !== 'paid') {
+    return null;
+  }
+
   const tokens = user?.publicMetadata?.tokens ?? 0;
 
   return (

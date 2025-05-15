@@ -2,29 +2,36 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from 'next/server';
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
+// Matches paths for admin-only access
 const isAdminRoute = createRouteMatcher(['/admin(.*)']);
-const isPublicRoute = createRouteMatcher(['/', '/auth/signIn', '/auth/signUp']);
+
+// These routes should not trigger any redirects, even for cooldown
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/auth/signIn',
+  '/auth/signUp',
+  '/textInput', // ✅ Allow direct access
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { sessionClaims, userId } = await auth();
 
-  // Check admin routes
+  // 🔒 Redirect non-admins away from admin routes
   if (isAdminRoute(req) && sessionClaims?.role !== 'admin') {
     const url = new URL('/', req.url);
     return NextResponse.redirect(url);
   }
 
-  // Check cooldown for signed-in users
+  // 🔄 Cooldown enforcement for signed-in users only
   if (userId && !isPublicRoute(req)) {
-    // Fetch the latest user metadata directly from Clerk
     const user = await clerkClient.users.getUser(userId);
     const lastExceedTime = user.publicMetadata?.lastExceedTime;
+    
     if (lastExceedTime) {
-      const timeSinceExceed = Date.now() - Number(lastExceedTime);
-      const threeMinutesInMs = 180000; // 3 minutes in milliseconds
-      
-      if (timeSinceExceed < threeMinutesInMs) {
-        // User is in cooldown, redirect to sign-in with error
+      const elapsed = Date.now() - Number(lastExceedTime);
+      const cooldown = 3 * 60 * 1000; // 3 minutes
+
+      if (elapsed < cooldown) {
         const signInUrl = new URL('/auth/signIn', req.url);
         signInUrl.searchParams.set('error', 'cooldown');
         return NextResponse.redirect(signInUrl);

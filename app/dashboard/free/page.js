@@ -1,5 +1,5 @@
 'use client';
-import { Box, Typography, Button, Paper, Container, Alert } from '@mui/material';
+import { Box, Typography, Button, Paper, Container, Alert, Grid } from '@mui/material';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import TokenPackages from '@/components/TokenPackages';
@@ -17,9 +17,9 @@ export default function FreeDashboardPage() {
       const role = user?.publicMetadata?.role;
       if (role !== 'free') {
         if (role === 'paid') {
-          router.replace('/dashboard/paid');
+          router.replace('/unauthorized');
         } else if (role === 'admin') {
-          router.replace('/dashboard/admin');
+          router.replace('/unauthorized');
         } else {
           router.replace('/');
         }
@@ -59,32 +59,44 @@ export default function FreeDashboardPage() {
         </Alert>
       )}
 
-      <Paper elevation={3} sx={{ p: 4, mb: 4, backgroundColor: '#f8f9fa' }}>
-        <Typography variant="h4" gutterBottom>
-          Free Plan Dashboard
-        </Typography>
-        <Typography variant="body1" paragraph>
-          You're currently on the free plan with limited access. Upgrade to unlock more features!
-        </Typography>
-        <Box sx={{ mt: 2 }}>
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={() => router.push('/auth/signUp?plan=paid')}
-          >
-            Upgrade to Paid Plan
-          </Button>
-        </Box>
-      </Paper>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Paper elevation={3} sx={{ p: 4, mb: 4, backgroundColor: '#f8f9fa' }}>
+            <Typography variant="h4" gutterBottom>
+              Free Plan Dashboard
+            </Typography>
+            <Typography variant="body1" paragraph>
+              You're currently on the free plan with limited access. Upgrade to unlock more features!
+            </Typography>
+            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={() => router.push('/auth/signUp?plan=paid')}
+              >
+                Upgrade to Paid Plan
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => router.push('/textInput')}
+              >
+                Start Editing Text
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
 
-      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        Purchase Additional Tokens
-      </Typography>
-      <Typography variant="body1" paragraph>
-        Need more tokens? Choose from our token packages below:
-      </Typography>
-      
-      <TokenPackages />
+        <Grid item xs={12}>
+          <Typography variant="h5" gutterBottom>
+            Purchase Additional Tokens
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Need more tokens? Choose from our token packages below:
+          </Typography>
+          <TokenPackages />
+        </Grid>
+      </Grid>
     </Container>
   );
 }
