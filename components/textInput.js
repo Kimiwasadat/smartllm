@@ -6,6 +6,7 @@ import "@fontsource/inter"; // Defaults to weight 400
 import { useUser, useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { checkForBlacklistedWords, getBlacklistedWords } from '@/firebase/blacklistUtils';
+import { clerkClient } from '@clerk/clerk-sdk-node';
 
 export default function TextInput() {
     const { user } = useUser();
@@ -125,53 +126,60 @@ export default function TextInput() {
 
         const originalWords = text.trim().split(/\s+/);
         const correctedWords = selfCorrectedText.trim().split(/\s+/);
-        let correctedCount = 0;
+        let wordsToReview = [];
 
-        for (let i = 0; i < Math.min(originalWords.length, correctedWords.length); i++) {
-            if (originalWords[i] !== correctedWords[i]) {
-                correctedCount++;
-            }
-        }
-
-        const tokenCost = Math.ceil(correctedCount / 2);
-
-        if (tokenCost > availableTokens) {
-            setError(`Insufficient tokens. Self-correction would cost ${tokenCost} tokens.`);
-            return;
-        }
-
+        // Get LLM corrections for all words
         try {
-            const newTokenCount = availableTokens - tokenCost;
-            const res = await fetch('/api/set-role', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    role: user.publicMetadata?.role,
-                    tokens: newTokenCount,
-                    canAccess: true
-                }),
+            const response = await axios.post('http://localhost:8000/app/api/generate', {
+                text: originalWords.join(' ')
             });
 
-            if (!res.ok) {
-                throw new Error('Failed to update tokens');
+            if (!response.data || !response.data.correctedText) {
+                throw new Error('Failed to get LLM corrections');
             }
 
-            setAvailableTokens(newTokenCount);
-            setCorrectedText(selfCorrectedText);
-            setHighlightedText(createHighlightedText(text, findCorrections(text, selfCorrectedText)));
+            const llmCorrectedWords = response.data.correctedText.trim().split(/\s+/);
+
+            // Only review words where LLM or self correction differs from original
+            for (let i = 0; i < Math.min(originalWords.length, correctedWords.length, llmCorrectedWords.length); i++) {
+                if (
+                    originalWords[i] !== correctedWords[i] ||
+                    originalWords[i] !== llmCorrectedWords[i]
+                ) {
+                    wordsToReview.push({
+                        original: originalWords[i],
+                        selfCorrected: correctedWords[i],
+                        llmCorrected: llmCorrectedWords[i],
+                        index: i
+                    });
+                }
+            }
+
+            if (wordsToReview.length === 0) {
+                setError('No corrections needed.');
+                return;
+            }
+
+            setWords(originalWords);
+            setCorrections(wordsToReview);
+            setCurrentWordIndex(0);
+            setCurrentCorrection(wordsToReview[0]);
+            setShowWordDialog(true);
+            setShowResult(true);
         } catch (error) {
             console.error('Error:', error);
-            setError('Failed to process self-correction. Please try again.');
+            setError('Failed to get LLM corrections. Please try again.');
         }
     };
 
     const processNextWord = () => {
-        if (currentWordIndex + 1 < words.length) {
+        if (currentWordIndex + 1 < corrections.length) {
             setCurrentWordIndex(prev => prev + 1);
+            setCurrentCorrection(corrections[currentWordIndex + 1]);
         } else {
             setShowWordDialog(false);
             setCurrentWordIndex(0);
+            setCurrentCorrection(null);
         }
     };
 
@@ -191,41 +199,37 @@ export default function TextInput() {
         setSavedCorrectWords(new Set());
 
         try {
+            // Check word limit for free users
+            if (user?.publicMetadata?.role === 'free' && wordCount > 20) {
+                // Set cooldown in Clerk metadata
+                await clerkClient.users.updateUser(user.id, {
+                    publicMetadata: {
+                        ...user.publicMetadata,
+                        lastExceedTime: Date.now().toString()
+                    }
+                });
+                
+                // Sign out the user
+                await signOut();
+                
+                // Redirect to sign in page with cooldown error
+                router.push('/auth/signIn?error=cooldown');
+                return;
+            }
+
             // First check for blacklisted words
             const blacklistCheck = await checkForBlacklistedWords(text);
             const tokenCostFromBlacklist = blacklistCheck.blacklistedCount;
 
-            console.log('Blacklist check results:', {
-                originalText: text,
-                censoredText: blacklistCheck.censoredText,
-                hasBlacklistedWords: blacklistCheck.hasBlacklistedWords,
-                tokenCost: tokenCostFromBlacklist,
-                currentTokens: availableTokens
-            });
-
-            // Split text into words and initialize
-            const textWords = text.split(/\s+/);
-            setWords(textWords);
-            setCurrentWordIndex(0);
-            
-            // Set initial display text with censored blacklisted words
-            setHighlightedText(createHighlightedText(blacklistCheck.censoredText, []));
-            
             if (tokenCostFromBlacklist > availableTokens) {
-                setError(`Insufficient tokens. Processing blacklisted words would cost ${tokenCostFromBlacklist} tokens (1 token per character in blacklisted words).`);
+                setError(`Insufficient tokens. Processing blacklisted words would cost ${tokenCostFromBlacklist} tokens.`);
                 setLoading(false);
                 return;
             }
 
-            // Update tokens for blacklisted words
+            // Update tokens for blacklisted words if any
             if (tokenCostFromBlacklist > 0) {
                 const newTokenCount = availableTokens - tokenCostFromBlacklist;
-                console.log('Deducting tokens for blacklisted words:', {
-                    oldTokenCount: availableTokens,
-                    deduction: tokenCostFromBlacklist,
-                    newTokenCount: newTokenCount
-                });
-
                 const res = await fetch('/api/set-role', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -244,8 +248,104 @@ export default function TextInput() {
                 setAvailableTokens(newTokenCount);
             }
 
-            setShowWordDialog(true);
-            setShowResult(true);
+            // Only apply self-correction review if selected
+            if (correctionType === 'self') {
+                await handleSelfCorrection();
+                setLoading(false);
+                return;
+            }
+
+            // LLM Correction (default)
+            if (user?.publicMetadata?.role === 'paid') {
+                if (availableTokens < 1) {
+                    setError('Insufficient tokens');
+                    setLoading(false);
+                    return;
+                }
+
+                const response = await axios.post('http://localhost:8000/app/api/generate', {
+                    text: text
+                });
+
+                if (!response.data || !response.data.correctedText) {
+                    throw new Error('Failed to get correction');
+                }
+
+                // Deduct one token for the correction
+                const newTokenCount = availableTokens - 1;
+                const res = await fetch('/api/set-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        role: 'paid',
+                        tokens: newTokenCount,
+                        canAccess: true
+                    }),
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to update tokens');
+                }
+
+                setAvailableTokens(newTokenCount);
+                setCorrectedText(response.data.correctedText);
+                setShowResult(true);
+
+                // Find differences between original and corrected text
+                const originalWords = text.split(/\s+/);
+                const correctedWords = response.data.correctedText.split(/\s+/);
+                const differences = [];
+
+                for (let i = 0; i < Math.min(originalWords.length, correctedWords.length); i++) {
+                    if (originalWords[i].toLowerCase() !== correctedWords[i].toLowerCase()) {
+                        differences.push({
+                            original: originalWords[i],
+                            corrected: correctedWords[i],
+                            index: i
+                        });
+                    }
+                }
+
+                // Create highlighted text showing the differences
+                setHighlightedText(createHighlightedText(text, differences));
+            } else {
+                // Free users get direct LLM correction
+                if (availableTokens < 1) {
+                    setError('Insufficient tokens');
+                    setLoading(false);
+                    return;
+                }
+
+                const response = await axios.post('http://localhost:8000/app/api/generate', {
+                    text: text
+                });
+
+                if (!response.data || !response.data.correctedText) {
+                    throw new Error('Failed to get correction');
+                }
+
+                // Deduct one token for the correction
+                const newTokenCount = availableTokens - 1;
+                const res = await fetch('/api/set-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        role: user.publicMetadata?.role,
+                        tokens: newTokenCount,
+                        canAccess: true
+                    }),
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to update tokens');
+                }
+
+                setAvailableTokens(newTokenCount);
+                setCorrectedText(response.data.correctedText);
+                setShowResult(true);
+            }
 
         } catch (error) {
             console.error('Error:', error);
@@ -265,51 +365,62 @@ export default function TextInput() {
                 processNextWord();
             } else if (action === 'correct') {
                 if (availableTokens < 1) {
-                    setError('Insufficient tokens');
+                    setError('Insufficient tokens. Please purchase more tokens to continue.');
                     return;
                 }
 
-                // Get LLM correction for single word
-                const response = await axios.post('http://localhost:8000/app/api/generate', {
-                    text: words[currentWordIndex]
-                });
-
-                if (!response.data || !response.data.correctedText) {
-                    throw new Error('Failed to get correction');
-                }
-
-                const correctedText = response.data.correctedText.trim().toLowerCase();
-                const originalWord = words[currentWordIndex];
-
-                // Check for special responses indicating no errors or text too short
-                const noErrorPatterns = [
-                    'no grammar or spelling error',
-                    'no errors found',
-                    'no spelling mistakes',
-                    'no grammatical errors',
-                    'text is correct',
-                    'word is correct',
-                    'this text is too short',
-                    'too short to review',
-                    'no changes needed'
-                ];
-
-                const isNoErrorResponse = noErrorPatterns.some(pattern => 
-                    correctedText.includes(pattern.toLowerCase())
-                );
-
-                if (isNoErrorResponse || correctedText === originalWord.toLowerCase()) {
-                    // If it's a "no error" response or the word is unchanged, 
-                    // automatically save as correct and move to next word
-                    setSavedCorrectWords(prev => new Set([...prev, originalWord]));
-                    processNextWord();
-                } else {
-                    // Only show correction dialog if there's an actual correction
+                // For self-correction, show options for the current word
+                if (correctionType === 'self') {
+                    const currentWord = corrections[currentWordIndex];
                     setCurrentCorrection({
-                        original: originalWord,
-                        corrected: response.data.correctedText.trim(),
-                        index: currentWordIndex
+                        original: currentWord.original,
+                        userCorrected: currentWord.userCorrected,
+                        index: currentWordIndex,
+                        needsReview: currentWord.needsReview
                     });
+                } else {
+                    // Get LLM correction for single word
+                    const response = await axios.post('http://localhost:8000/app/api/generate', {
+                        text: words[currentWordIndex]
+                    });
+
+                    if (!response.data || !response.data.correctedText) {
+                        throw new Error('Failed to get correction');
+                    }
+
+                    const correctedText = response.data.correctedText.trim().toLowerCase();
+                    const originalWord = words[currentWordIndex];
+
+                    // Check for special responses indicating no errors or text too short
+                    const noErrorPatterns = [
+                        'no grammar or spelling error',
+                        'no errors found',
+                        'no spelling mistakes',
+                        'no grammatical errors',
+                        'text is correct',
+                        'word is correct',
+                        'this text is too short',
+                        'too short to review',
+                        'no changes needed'
+                    ];
+
+                    const isNoErrorResponse = noErrorPatterns.some(pattern => 
+                        correctedText.includes(pattern.toLowerCase())
+                    );
+
+                    if (isNoErrorResponse || correctedText === originalWord.toLowerCase()) {
+                        // If it's a "no error" response or the word is unchanged, 
+                        // automatically save as correct and move to next word
+                        setSavedCorrectWords(prev => new Set([...prev, originalWord]));
+                        processNextWord();
+                    } else {
+                        // Only show correction dialog if there's an actual correction
+                        setCurrentCorrection({
+                            original: originalWord,
+                            corrected: response.data.correctedText.trim(),
+                            index: currentWordIndex
+                        });
+                    }
                 }
             }
         } catch (error) {
@@ -318,49 +429,77 @@ export default function TextInput() {
         }
     };
 
-    const handleAcceptCorrection = async (correction) => {
+    const handleGetLLMCorrection = async () => {
         if (availableTokens < 1) {
-            setError('Insufficient tokens');
+            setError('Insufficient tokens. Please purchase more tokens to continue.');
             return;
         }
 
         try {
-            // Deduct one token for accepting the correction
-            const newTokenCount = availableTokens - 1;
-            const res = await fetch('/api/set-role', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    role: user.publicMetadata?.role,
-                    tokens: newTokenCount,
-                    canAccess: true
-                }),
+            const response = await axios.post('http://localhost:8000/app/api/generate', {
+                text: words[currentWordIndex]
             });
 
-            if (!res.ok) throw new Error('Failed to update tokens');
-            
+            if (!response.data || !response.data.correctedText) {
+                throw new Error('Failed to get correction');
+            }
+
+            const correctedText = response.data.correctedText.trim();
+            setCurrentCorrection({
+                ...currentCorrection,
+                llmCorrected: correctedText
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            setError('Failed to get LLM correction. Please try again.');
+        }
+    };
+
+    const handleAcceptCorrection = async (correction, type) => {
+        let newTokenCount = availableTokens;
+        if (type === 'llm' || type === 'self') {
+            if (availableTokens < 1) {
+                setError('Insufficient tokens. Please purchase more tokens to continue.');
+                return;
+            }
+            newTokenCount = availableTokens - 1;
+        }
+
+        try {
+            if (type === 'llm' || type === 'self') {
+                const res = await fetch('/api/set-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        role: 'paid',
+                        canAccess: true,
+                        tokens: newTokenCount
+                    }),
+                });
+                if (!res.ok) throw new Error('Failed to update tokens');
+            }
             setAvailableTokens(newTokenCount);
 
-            // Add to accepted corrections
-            setAcceptedCorrections(prev => [...prev, correction]);
+            let chosenWord = correction.original;
+            if (type === 'llm') chosenWord = correction.llmCorrected;
+            if (type === 'self') chosenWord = correction.selfCorrected;
 
-            // Update the text array
             const updatedWords = [...words];
-            updatedWords[correction.index] = correction.corrected;
+            updatedWords[correction.index] = chosenWord;
             setWords(updatedWords);
 
-            // Update the display text
             const displayText = updatedWords.join(' ');
             const blacklistCheck = await checkForBlacklistedWords(displayText);
             const finalText = blacklistCheck.censoredText;
-            
-            // Update highlighted text with all accepted corrections
-            setHighlightedText(createHighlightedText(finalText, [...acceptedCorrections, correction]));
+            setHighlightedText(createHighlightedText(finalText, [...acceptedCorrections, { ...correction, corrected: chosenWord }]));
             setText(displayText);
+            setAcceptedCorrections(prev => [...prev, { ...correction, corrected: chosenWord }]);
+            // Move to next word or close dialog
+            processNextWord();
         } catch (error) {
             console.error('Error:', error);
-            setError('Failed to apply correction');
+            setError('Failed to apply correction. Please try again.');
         }
     };
 
@@ -387,6 +526,10 @@ export default function TextInput() {
         setHighlightedText('');
         setError('');
         setShowResult(false);
+        setCorrections([]);
+        setAcceptedCorrections([]);
+        setCurrentCorrection(null);
+        setSavedCorrectWords(new Set());
     }
 
     const handleDownload = async (type = 'corrected') => {
@@ -535,57 +678,26 @@ export default function TextInput() {
                     <Button
                         variant='contained'
                         color="primary"
-                        onClick={correctionType === 'self' ? handleSelfCorrection : handleSubmit}
-                        disabled={loading || text.trim() === '' || (correctionType === 'self' && !selfCorrectedText.trim())}
+                        onClick={handleSubmit}
+                        disabled={loading || text.trim() === ''}
                     >
-                        {loading ? "Processing..." : "Submit"}
+                        {loading ? "Processing..." : "Check Spelling"}
                     </Button>
                     <Button variant='contained' color="secondary" onClick={handleClear}>Clear</Button>
-                    {correctedText && user?.publicMetadata?.role === 'paid' && (
-                        <Button variant='contained' color="success" onClick={handleDownload}>
-                            Download Corrected Text
-                        </Button>
-                    )}
                 </Box>
 
-                {showResult && correctedText && (
+                {showResult && (
                     <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
                         <Typography variant="h6" gutterBottom>
-                            Text with Suggested Corrections:
+                            {user?.publicMetadata?.role === 'paid' 
+                                ? 'Text with Suggested Corrections:'
+                                : 'Corrected Text:'}
                         </Typography>
                         <Typography 
                             component="div" 
-                            dangerouslySetInnerHTML={{ __html: highlightedText || correctedText }}
+                            dangerouslySetInnerHTML={{ __html: user?.publicMetadata?.role === 'paid' ? highlightedText : correctedText }}
                             sx={{ 
                                 lineHeight: 1.6,
-                                '& span': {
-                                    display: 'inline-block',
-                                    verticalAlign: 'middle'
-                                }
-                            }}
-                        />
-                    </Box>
-                )}
-
-                {showResult && (
-                    <Box 
-                        sx={{ 
-                            mt: 4, 
-                            p: 3, 
-                            border: '1px solid #ccc', 
-                            borderRadius: 2,
-                            backgroundColor: '#f8f9fa'
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom>
-                            Final Text with Corrections:
-                        </Typography>
-                        <Typography 
-                            component="div" 
-                            dangerouslySetInnerHTML={{ __html: highlightedText }}
-                            sx={{ 
-                                lineHeight: 1.8,
-                                fontSize: '1.1rem',
                                 '& span.correction': {
                                     backgroundColor: '#ffeb3b',
                                     padding: '2px 4px',
@@ -604,72 +716,60 @@ export default function TextInput() {
                         />
                     </Box>
                 )}
+            </Box>
 
-                <Dialog open={showWordDialog} onClose={() => setShowWordDialog(false)}>
+            {user?.publicMetadata?.role === 'paid' && (
+                <Dialog 
+                    open={showWordDialog && !!currentCorrection} 
+                    onClose={() => setShowWordDialog(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
                     <DialogTitle>
-                        Process Word ({currentWordIndex + 1} of {words.length})
+                        Review Word ({currentWordIndex + 1} of {corrections.length})
                     </DialogTitle>
                     <DialogContent>
-                        {words.length > 0 && (
+                        {corrections.length > 0 && currentCorrection && (
                             <Box sx={{ mb: 2, p: 2, border: '1px solid #eee', borderRadius: 1 }}>
                                 <Typography variant="h6" gutterBottom>
-                                    Current word: <span style={{ fontWeight: 'bold' }}>{words[currentWordIndex]}</span>
+                                    Original: <span style={{ fontWeight: 'bold' }}>{currentCorrection.original}</span>
                                 </Typography>
-                                
-                                {currentCorrection ? (
-                                    <>
-                                        <Typography>
-                                            Suggested correction: <span style={{ color: 'green' }}>{currentCorrection.corrected}</span>
-                                        </Typography>
-                                        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                                            <Button
-                                                variant="contained"
-                                                color="primary"
-                                                onClick={async () => {
-                                                    await handleAcceptCorrection(currentCorrection);
-                                                    setCurrentCorrection(null);
-                                                    processNextWord();
-                                                }}
-                                            >
-                                                Accept Correction (1 token)
-                                            </Button>
-                                            <Button
-                                                variant="outlined"
-                                                onClick={() => {
-                                                    setCurrentCorrection(null);
-                                                    handleSaveAsCorrect({
-                                                        original: words[currentWordIndex],
-                                                        index: currentWordIndex
-                                                    });
-                                                    processNextWord();
-                                                }}
-                                            >
-                                                Keep Original
-                                            </Button>
-                                        </Box>
-                                    </>
-                                ) : (
-                                    <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            onClick={() => handleProcessWord('correct')}
-                                        >
-                                            Check Spelling (1 token)
-                                        </Button>
-                                        <Button
-                                            variant="outlined"
-                                            onClick={() => handleProcessWord('save')}
-                                        >
-                                            Save as Correct
-                                        </Button>
-                                    </Box>
-                                )}
+                                <Typography>
+                                    LLM Correction: <span style={{ color: 'blue' }}>{currentCorrection.llmCorrected}</span>
+                                </Typography>
+                                <Typography>
+                                    Self Correction: <span style={{ color: 'green' }}>{currentCorrection.selfCorrected}</span>
+                                </Typography>
+                                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => handleAcceptCorrection(currentCorrection, 'llm')}
+                                    >
+                                        Use LLM Correction (1 token)
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        color="secondary"
+                                        onClick={() => handleAcceptCorrection(currentCorrection, 'self')}
+                                    >
+                                        Use Self Correction (1 token)
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => handleAcceptCorrection(currentCorrection, 'original')}
+                                    >
+                                        Keep Original (free)
+                                    </Button>
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                    Available tokens: {availableTokens}
+                                </Typography>
                             </Box>
                         )}
                     </DialogContent>
                 </Dialog>
-            </Box>
+            )}
         </>
     );
 }
