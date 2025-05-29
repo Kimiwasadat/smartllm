@@ -16,13 +16,11 @@ import DistinctFeatures from '@/components/DistinctFeatures'
 export default function Home() {
   return (
     <>
-    <NavBar />
       <Stack style={{alignItems:"center"}}>
         <HomeScreen />
         <DistinctFeatures />
         <PricingScreen />
       </Stack>
-    
     </>
   );
 }

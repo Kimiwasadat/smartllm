@@ -45,6 +45,25 @@ export default function TextInput() {
         }
     }, [user]);
 
+    // Poll for latest user info every 1 second for real-time token updates
+    useEffect(() => {
+        let interval;
+        if (user?.publicMetadata?.role === 'paid') {
+            const fetchLatestUser = async () => {
+                try {
+                    // Refetch user from Clerk
+                    const latestUser = await fetch(`/api/admin/users/${user.id}`).then(res => res.json());
+                    const tokens = Number(latestUser.publicMetadata?.tokens);
+                    setAvailableTokens(tokens && tokens > 0 ? tokens : 40);
+                } catch (err) {
+                    // fallback: do nothing
+                }
+            };
+            interval = setInterval(fetchLatestUser, 1000); // every 1 second
+        }
+        return () => clearInterval(interval);
+    }, [user]);
+
     const handleFileUpload = (event) => {
         const file = event.target.files[0]
         if (!file) return;
@@ -271,8 +290,29 @@ export default function TextInput() {
                     throw new Error('Failed to get correction');
                 }
 
-                // Deduct one token for the correction
-                const newTokenCount = availableTokens - 1;
+                // Find differences between original and corrected text
+                const originalWords = text.split(/\s+/);
+                const correctedWords = response.data.correctedText.split(/\s+/);
+                const differences = [];
+
+                for (let i = 0; i < Math.min(originalWords.length, correctedWords.length); i++) {
+                    if (originalWords[i].toLowerCase() !== correctedWords[i].toLowerCase()) {
+                        differences.push({
+                            original: originalWords[i],
+                            corrected: correctedWords[i],
+                            index: i
+                        });
+                    }
+                }
+
+                const tokenCost = differences.length;
+                if (tokenCost > availableTokens) {
+                    setError(`Insufficient tokens. This correction would cost ${tokenCost} tokens.`);
+                    setLoading(false);
+                    return;
+                }
+
+                const newTokenCount = availableTokens - tokenCost;
                 const res = await fetch('/api/set-role', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -291,21 +331,6 @@ export default function TextInput() {
                 setAvailableTokens(newTokenCount);
                 setCorrectedText(response.data.correctedText);
                 setShowResult(true);
-
-                // Find differences between original and corrected text
-                const originalWords = text.split(/\s+/);
-                const correctedWords = response.data.correctedText.split(/\s+/);
-                const differences = [];
-
-                for (let i = 0; i < Math.min(originalWords.length, correctedWords.length); i++) {
-                    if (originalWords[i].toLowerCase() !== correctedWords[i].toLowerCase()) {
-                        differences.push({
-                            original: originalWords[i],
-                            corrected: correctedWords[i],
-                            index: i
-                        });
-                    }
-                }
 
                 // Create highlighted text showing the differences
                 setHighlightedText(createHighlightedText(text, differences));

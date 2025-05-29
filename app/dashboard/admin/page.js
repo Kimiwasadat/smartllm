@@ -279,6 +279,10 @@ export default function AdminDashboard() {
         }
     };
 
+    // Fix Tabs value to only use valid values
+    const allowedTabs = [0, 1];
+    const safeTab = allowedTabs.includes(activeTab) ? activeTab : 0;
+
     if (!isLoaded || loading) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             Loading...
@@ -286,19 +290,19 @@ export default function AdminDashboard() {
     }
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
             <Typography variant="h4" gutterBottom>
                 Admin Dashboard
             </Typography>
 
-            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
-                <Tab label="User Management" />
-                <Tab label="Token Management" />
+            <Tabs value={safeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
+                <Tab label="User Management" value={0} />
+                <Tab label="Token Management" value={1} />
                 <Tab label="Complaints" />
                 <Tab label="Rejections" />
             </Tabs>
 
-            {activeTab === 0 && (
+            {safeTab === 0 && (
                 <Card>
                     <CardContent>
                         <Typography variant="h6" gutterBottom>
@@ -311,37 +315,43 @@ export default function AdminDashboard() {
                                         <TableCell>Username</TableCell>
                                         <TableCell>Role</TableCell>
                                         <TableCell>Available Tokens</TableCell>
+                                        <TableCell>Used Tokens</TableCell>
+                                        <TableCell>Corrections Made</TableCell>
                                         <TableCell>Status</TableCell>
                                         <TableCell>Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {users.map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell>{user.username}</TableCell>
-                                            <TableCell>{user.role}</TableCell>
-                                            <TableCell>{user.availableTokens}</TableCell>
-                                            <TableCell>{user.status}</TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                                    <Button
-                                                        variant="contained"
-                                                        color="error"
-                                                        onClick={() => handleSuspendUser(user.id)}
-                                                        disabled={user.status === 'suspended'}
-                                                    >
-                                                        Suspend
-                                                    </Button>
-                                                    <Button
-                                                        variant="outlined"
-                                                        onClick={() => setSelectedUser(user)}
-                                                    >
-                                                        Manage Tokens
-                                                    </Button>
-                                                </Box>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {users
+                                        .filter(user => user.role === 'paid')
+                                        .map((user) => (
+                                            <TableRow key={user.id}>
+                                                <TableCell>{user.username}</TableCell>
+                                                <TableCell>{user.role}</TableCell>
+                                                <TableCell>{user.availableTokens}</TableCell>
+                                                <TableCell>{user.usedTokens}</TableCell>
+                                                <TableCell>{user.correctionsMade}</TableCell>
+                                                <TableCell>{user.status}</TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                                        <Button
+                                                            variant="contained"
+                                                            color="error"
+                                                            onClick={() => handleSuspendUser(user.id)}
+                                                            disabled={user.status === 'suspended'}
+                                                        >
+                                                            Suspend
+                                                        </Button>
+                                                        <Button
+                                                            variant="outlined"
+                                                            onClick={() => setSelectedUser(user)}
+                                                        >
+                                                            Manage Tokens
+                                                        </Button>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
                                 </TableBody>
                             </Table>
                         </TableContainer>
@@ -349,7 +359,7 @@ export default function AdminDashboard() {
                 </Card>
             )}
 
-            {activeTab === 1 && (
+            {safeTab === 1 && (
                 <Card>
                     <CardContent>
                         <Typography variant="h6" gutterBottom>
@@ -391,7 +401,7 @@ export default function AdminDashboard() {
                 </Card>
             )}
 
-            {activeTab === 2 && (
+            {safeTab === 2 && (
                 <Card>
                     <CardContent>
                         <Typography variant="h6" gutterBottom>
@@ -433,7 +443,7 @@ export default function AdminDashboard() {
                 </Card>
             )}
 
-            {activeTab === 3 && (
+            {safeTab === 3 && (
                 <Card>
                     <CardContent>
                         <Typography variant="h6" gutterBottom>

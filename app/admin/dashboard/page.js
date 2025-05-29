@@ -96,11 +96,15 @@ export default function AdminDashboard() {
         return <div>Loading...</div>;
     }
 
+    // Fix Tabs value to only use valid values
+    const allowedTabs = ['users', 'tokens'];
+    const safeTab = allowedTabs.includes(activeTab) ? activeTab : 'users';
+
     return (
         <div className="container mx-auto p-6">
             <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
             
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={safeTab} onValueChange={setActiveTab}>
                 <TabsList>
                     <TabsTrigger value="users">User Management</TabsTrigger>
                     <TabsTrigger value="tokens">Token Management</TabsTrigger>
@@ -109,7 +113,7 @@ export default function AdminDashboard() {
                 <TabsContent value="users">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Paid Users</CardTitle>
+                            <CardTitle>All Users</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -125,33 +129,35 @@ export default function AdminDashboard() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {users.map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell>{user.email}</TableCell>
-                                            <TableCell>{user.role}</TableCell>
-                                            <TableCell>{user.availableTokens}</TableCell>
-                                            <TableCell>{user.usedTokens}</TableCell>
-                                            <TableCell>{user.correctionsMade}</TableCell>
-                                            <TableCell>{user.status}</TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        variant="destructive"
-                                                        onClick={() => handleSuspendUser(user.id)}
-                                                        disabled={user.status === 'suspended'}
-                                                    >
-                                                        Suspend
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        onClick={() => setSelectedUser(user)}
-                                                    >
-                                                        Manage Tokens
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {users
+                                        .filter(user => user.role === 'paid')
+                                        .map((user) => (
+                                            <TableRow key={user.id}>
+                                                <TableCell>{user.email}</TableCell>
+                                                <TableCell>{user.role}</TableCell>
+                                                <TableCell>{user.availableTokens}</TableCell>
+                                                <TableCell>{user.usedTokens}</TableCell>
+                                                <TableCell>{user.correctionsMade}</TableCell>
+                                                <TableCell>{user.status}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="destructive"
+                                                            onClick={() => handleSuspendUser(user.id)}
+                                                            disabled={user.status === 'suspended'}
+                                                        >
+                                                            Suspend
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => setSelectedUser(user)}
+                                                        >
+                                                            Manage Tokens
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
                                 </TableBody>
                             </Table>
                         </CardContent>

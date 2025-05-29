@@ -6,7 +6,7 @@ export async function GET(req) {
     const { userId } = getAuth(req);
 
     if (!userId) {
-        return new NextResponse('Unauthorized', { status: 401 });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
@@ -15,26 +15,27 @@ export async function GET(req) {
         
         // Check if user is admin
         if (currentUser.publicMetadata?.role !== 'admin') {
-            return new NextResponse('Forbidden', { status: 403 });
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         // Get all users
         const allUsers = await clerkClient.users.getUserList();
         
-        // Filter and map paid users with their token information
-        const paidUsers = allUsers
-            .filter(user => user.publicMetadata?.role === 'paid')
-            .map(user => ({
-                id: user.id,
-                username: user.username || user.firstName || user.lastName || user.id,
-                role: user.publicMetadata?.role || 'free',
-                availableTokens: user.publicMetadata?.tokens || 0,
-                status: user.publicMetadata?.status || 'active'
-            }));
+        // Map all users with their token information
+        const users = allUsers.map(user => ({
+            id: user.id,
+            email: user.emailAddresses?.[0]?.emailAddress || '',
+            username: user.username || user.firstName || user.lastName || user.id,
+            role: user.publicMetadata?.role || 'free',
+            availableTokens: user.publicMetadata?.tokens || 0,
+            usedTokens: user.publicMetadata?.usedTokens || 0,
+            correctionsMade: user.publicMetadata?.correctionsMade || 0,
+            status: user.publicMetadata?.status || 'active'
+        }));
 
-        return NextResponse.json(paidUsers);
+        return NextResponse.json(users);
     } catch (error) {
         console.error('Error fetching users:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 } 

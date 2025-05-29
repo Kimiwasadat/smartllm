@@ -1,9 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #4F46E5;
-  --foreground: #171717;
+  --color-primary: #4F46E5;
+  --color-primary-light: #6366F1;
+  --color-secondary: #6366F1;
+  --color-success: #22C55E;
+  --color-error: #EF4444;
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-text: #1A1E2E;
+  --color-muted: #6B7280;
+  --color-border: #E5E7EB;
+  --color-accent: #A5B4FC;
+
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
+
 body {
   font-family: 'Inter', sans-serif;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+button, .MuiButton-root {
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.card, .MuiCard-root {
+  background: var(--color-surface);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px 0 rgba(31, 41, 55, 0.06);
+}
+
+input, textarea, .MuiInputBase-root {
+  background: var(--color-surface);
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.MuiTabs-indicator {
+  background-color: var(--color-primary) !important;
+}
+
+.Mui-selected {
+  color: var(--color-primary) !important;
 }

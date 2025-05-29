@@ -1,49 +1,45 @@
 'use client';              // MUI needs this
 
-import { Button, Box, Paper, Stack, ButtonGroup, Link } from '@mui/material';
-import { blue } from '@mui/material/colors';
-import "@fontsource/inter"; // Defaults to weight 400
-import "@fontsource/inter/600.css";
+import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import {SignedIn, SignedOut, UserButton} from '@clerk/nextjs';
-export default function NavBar(){
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+
+export default function NavBar() {
+  const { user, isLoaded } = useUser();
   const router = useRouter();
-    return(
-      <Box>
-      <Paper elevation={8} sx={{ bgcolor:' #1A1E2E',margin:3,padding:'0.5px'}}>
-        <Stack direction="row">
-        <Stack sx={{ml:3}}>
-          <h2 style={{color:"#F9FAFB" }}>SmartLLM</h2>
-        </Stack>
-        <ButtonGroup variant="contained" 
-        sx={{ml:5,'& .MuiButton-root': {
-          color: 'common.white',                // white text
-          border: 'none',                       // no outline
-          '&:hover': {
-            backgroundColor: 'transparent',     // kill blue hover tint
-          },
-          '&.Mui-focusVisible': {
-            outline: 'none',                    // kill blue focus ring
-          },
-        },}}aria-label="navbar buttons">
-        <Button variant="text" sx={{color: '#F9FAFB',}}>Features</Button>
-        <Button variant="text" sx={{color: '#F9FAFB',}}>Review</Button>
-        <Button variant="text" sx={{color: '#F9FAFB',}}>Pricing</Button>
-        <Button variant="text" sx={{color: '#F9FAFB',}} onClick={() => router.push('/textInput')}>Text Editor</Button>
-    
-        </ButtonGroup>
-        <Box sx={{ flexGrow: 1 }} />
-        <Stack direction="row" sx={{justifyContent: 'flex-end', padding: "15px 10px"}}>
-        <SignedOut>
-        <Button type="button" varaint="contained" size ="small" sx={{bgcolor: '#4F46E5', '&:hover': { bgcolor: '#689f38' }, color:"#F9FAFB", padding:"10px 16px"}} onClick={() => router.push('/auth/signUp')}>Sign Up</Button>
-        <Button type="button" varaint="outlined"sx={{color:"#F9FAFB", padding:"9px 10px"}} onClick={() => router.push('/auth/signIn')}>Sign In</Button>
-        </SignedOut>
-        <SignedIn>
-          <UserButton afterSignOutUrl="/" /> 
-        </SignedIn>
-        </Stack>
-        </Stack>
-      </Paper>
-      </Box>
-    );
+
+  const goToDashboard = () => {
+    if (!isLoaded) return;
+    if (user?.publicMetadata?.role === 'admin') {
+      router.push('/dashboard/admin');
+    } else {
+      router.push('/dashboard');
     }
+  };
+
+  const goToTextEditor = () => {
+    if (!isLoaded) return;
+    if (user?.publicMetadata?.role === 'paid' || user?.publicMetadata?.role === 'free') {
+      router.push('/textInput');
+    } else if (user?.publicMetadata?.role === 'admin') {
+      router.push('/dashboard/admin');
+    } else {
+      router.push('/auth/signIn');
+    }
+  };
+
+  return (
+    <AppBar position="static" sx={{ background: '#1A1E2E', boxShadow: '0 2px 8px 0 rgba(31,41,55,0.06)', borderRadius: '10px', margin: '16px', width: 'calc(100% - 32px)' }}>
+      <Toolbar>
+        <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 700, color: '#fff' }}>
+          SmartLLM
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button color="inherit" sx={{ color: '#fff' }} onClick={() => router.push('/')}>Home</Button>
+          <Button color="inherit" sx={{ color: '#fff' }} onClick={goToDashboard}>Dashboard</Button>
+          <Button color="inherit" sx={{ color: '#fff' }} onClick={goToTextEditor}>Text Editor</Button>
+        </Box>
+      </Toolbar>
+    </AppBar>
+  );
+}

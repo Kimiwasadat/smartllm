@@ -17,8 +17,10 @@ export default function RootLayout({ children }) {
   return (
     <ClerkProvider>
     <html lang="en" >
-      <body  style={{fontFamily: 'Inter, sans-serif',}} className={inter.className}>{children}</body>
-      
+      <body  style={{fontFamily: 'Inter, sans-serif',}} className={inter.className}>
+        <NavBar />
+        {children}
+      </body>
     </html>
     </ClerkProvider>
   );
