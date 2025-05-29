@@ -3,11 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, Typography, Button, Input, Tabs, Tab, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import { toast } from 'sonner';
 
 export default function AdminDashboard() {
@@ -17,7 +13,7 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
     const [tokenAmount, setTokenAmount] = useState('');
-    const [activeTab, setActiveTab] = useState('users');
+    const [activeTab, setActiveTab] = useState(0);
 
     useEffect(() => {
         if (isLoaded && user?.publicMetadata?.role !== 'admin') {
@@ -97,110 +93,99 @@ export default function AdminDashboard() {
     }
 
     // Fix Tabs value to only use valid values
-    const allowedTabs = ['users', 'tokens'];
-    const safeTab = allowedTabs.includes(activeTab) ? activeTab : 'users';
+    const allowedTabs = [0, 1];
+    const safeTab = allowedTabs.includes(activeTab) ? activeTab : 0;
 
     return (
         <div className="container mx-auto p-6">
             <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-            
-            <Tabs value={safeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                    <TabsTrigger value="users">User Management</TabsTrigger>
-                    <TabsTrigger value="tokens">Token Management</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="users">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>All Users</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Role</TableHead>
-                                        <TableHead>Available Tokens</TableHead>
-                                        <TableHead>Used Tokens</TableHead>
-                                        <TableHead>Corrections Made</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {users
-                                        .filter(user => user.role === 'paid')
-                                        .map((user) => (
-                                            <TableRow key={user.id}>
-                                                <TableCell>{user.email}</TableCell>
-                                                <TableCell>{user.role}</TableCell>
-                                                <TableCell>{user.availableTokens}</TableCell>
-                                                <TableCell>{user.usedTokens}</TableCell>
-                                                <TableCell>{user.correctionsMade}</TableCell>
-                                                <TableCell>{user.status}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            variant="destructive"
-                                                            onClick={() => handleSuspendUser(user.id)}
-                                                            disabled={user.status === 'suspended'}
-                                                        >
-                                                            Suspend
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => setSelectedUser(user)}
-                                                        >
-                                                            Manage Tokens
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="tokens">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Token Management</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {selectedUser ? (
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold">
-                                        Managing tokens for: {selectedUser.email}
-                                    </h3>
-                                    <div className="flex gap-4">
-                                        <Input
-                                            type="number"
-                                            placeholder="Enter token amount"
-                                            value={tokenAmount}
-                                            onChange={(e) => setTokenAmount(e.target.value)}
-                                            min="1"
-                                        />
-                                        <Button onClick={() => handleTokenDeduction(selectedUser.id)}>
-                                            Deduct Tokens
-                                        </Button>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setSelectedUser(null)}
-                                    >
+            <Tabs value={safeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+                <Tab label="User Management" value={0} />
+                <Tab label="Token Management" value={1} />
+            </Tabs>
+            {safeTab === 0 && (
+                <Card sx={{ mt: 2 }}>
+                    <CardHeader title={<Typography variant="h6">All Users</Typography>} />
+                    <CardContent>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Email</TableCell>
+                                    <TableCell>Role</TableCell>
+                                    <TableCell>Available Tokens</TableCell>
+                                    <TableCell>Used Tokens</TableCell>
+                                    <TableCell>Corrections Made</TableCell>
+                                    <TableCell>Status</TableCell>
+                                    <TableCell>Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {users
+                                    .filter(user => user.role === 'paid')
+                                    .map((user) => (
+                                        <TableRow key={user.id}>
+                                            <TableCell>{user.email}</TableCell>
+                                            <TableCell>{user.role}</TableCell>
+                                            <TableCell>{user.availableTokens}</TableCell>
+                                            <TableCell>{user.usedTokens}</TableCell>
+                                            <TableCell>{user.correctionsMade}</TableCell>
+                                            <TableCell>{user.status}</TableCell>
+                                            <TableCell>
+                                                <div style={{ display: 'flex', gap: 8 }}>
+                                                    <Button
+                                                        color="error"
+                                                        variant="contained"
+                                                        onClick={() => handleSuspendUser(user.id)}
+                                                        disabled={user.status === 'suspended'}
+                                                    >
+                                                        Suspend
+                                                    </Button>
+                                                    <Button
+                                                        variant="outlined"
+                                                        onClick={() => setSelectedUser(user)}
+                                                    >
+                                                        Manage Tokens
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
+            {safeTab === 1 && (
+                <Card sx={{ mt: 2 }}>
+                    <CardHeader title={<Typography variant="h6">Token Management</Typography>} />
+                    <CardContent>
+                        {selectedUser ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <Typography variant="subtitle1">
+                                    Managing tokens for: {selectedUser.email}
+                                </Typography>
+                                <div style={{ display: 'flex', gap: 16 }}>
+                                    <Input
+                                        type="number"
+                                        placeholder="Enter token amount"
+                                        value={tokenAmount}
+                                        onChange={(e) => setTokenAmount(e.target.value)}
+                                        inputProps={{ min: 1 }}
+                                    />
+                                    <Button variant="contained" onClick={() => handleTokenDeduction(selectedUser.id)}>
+                                        Deduct Tokens
+                                    </Button>
+                                    <Button variant="outlined" onClick={() => setSelectedUser(null)}>
                                         Close
                                     </Button>
                                 </div>
-                            ) : (
-                                <p>Select a user to manage their tokens</p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+                            </div>
+                        ) : (
+                            <Typography>Select a user to manage their tokens</Typography>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 } 
