@@ -1,12 +1,12 @@
-import { currentUser } from '@clerk/nextjs';
+import { getAuth } from '@clerk/nextjs/server';
 import { users } from '@clerk/clerk-sdk-node';
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
-    const user = await currentUser();
+    const { userId } = getAuth(req);
 
-    if (!user) {
-        return new NextResponse('Unauthorized', { status: 401 });
+    if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
@@ -29,6 +29,6 @@ export async function POST(req) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error approving user:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 } 
