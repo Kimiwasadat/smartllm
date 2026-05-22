@@ -1,7 +1,7 @@
 'use client'
 import React, {useEffect, useRef} from 'react';
 import { Typed } from 'react-typed';
-import {Button, Paper, Box, Stack} from '@mui/material'
+import {Button, Paper, Box, Stack, Typography, Container} from '@mui/material'
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 
@@ -12,22 +12,23 @@ const TypedComponent = () =>{
     useEffect(() => {
       typedInstance.current = new Typed(elRef.current, {
         strings: [
-          'Your text editing and collaboration needs solved',
-          'Create and edit your text with ease',
-          'Check your grammar and make sure your writing is tip-top for your needs',
+          'Your text editing and collaboration needs solved.',
+          'Create and edit your text with absolute ease.',
+          'Grammar checked, polished, and ready to impress.',
         ],
-        typeSpeed: 50,
-        backSpeed: 30,
+        typeSpeed: 40,
+        backSpeed: 20,
         loop: true,
+        showCursor: true,
+        cursorChar: '|',
       });
   
       return () => {
-        // Destroy Typed instance on unmount
         typedInstance.current.destroy();
       };
     }, []);
   
-    return <span ref={elRef} />;
+    return <span ref={elRef} className="text-accent font-medium" />;
 };
 
 export default function HomeScreen(){
@@ -38,42 +39,51 @@ export default function HomeScreen(){
         if (!isLoaded) return;
 
         if (!user) {
-            // If not logged in, redirect to sign up
             router.push('/auth/signUp');
             return;
         }
 
         const role = user.publicMetadata?.role;
         if (role === 'admin') {
-            // If admin user, go to admin dashboard
             router.push('/dashboard/admin');
         } else if (role === 'paid') {
-            // If paid user, go directly to text input
             router.push('/textInput');
         } else {
-            // If free user, go to free dashboard
             router.push('/dashboard/free');
         }
     };
 
     return (
-        <>
-        <h1>Welcome to SmartLLM</h1>
-        <Box><TypedComponent /></Box>
-        <Paper elevation={0} sx={{ alignItems:'center', backgroundColor: 'transparent', boxShadow: 'none', marginTop:5}}>
-          <Stack direction='row' spacing={2}>
-            <Box sx={{alignItems:'center'}}>
-                <Button 
-                    variant="contained" 
-                    color="primary" 
-                    onClick={handleGetStarted}
-                >
-                    Get Started
-                </Button>
-                <Button variant ="outlined" color="secondary" sx={{marginLeft: 2}}>Learn More</Button>
+        <Container maxWidth="lg" sx={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box className="glass-panel animate-fade-in" sx={{ p: 8, textAlign: 'center', maxWidth: '800px', width: '100%', mt: 10, mb: 10 }}>
+                <Typography variant="h2" component="h1" sx={{ fontWeight: 800, mb: 3, letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    Welcome to SmartLLM
+                </Typography>
+                
+                <Typography variant="h5" sx={{ mb: 6, color: 'var(--color-muted)', minHeight: '60px', lineHeight: 1.6 }}>
+                    <TypedComponent />
+                </Typography>
+                
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} justifyContent="center" alignItems="center">
+                    <Button 
+                        variant="contained" 
+                        color="primary" 
+                        size="large"
+                        onClick={handleGetStarted}
+                        sx={{ px: 6, py: 1.5, fontSize: '1.1rem' }}
+                    >
+                        Get Started Free
+                    </Button>
+                    <Button 
+                        variant="outlined" 
+                        color="secondary" 
+                        size="large"
+                        sx={{ px: 6, py: 1.5, fontSize: '1.1rem' }}
+                    >
+                        Learn More
+                    </Button>
+                </Stack>
             </Box>
-          </Stack>
-        </Paper>
-        </>
+        </Container>
     );
 }
