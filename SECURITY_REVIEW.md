@@ -49,3 +49,6 @@ This document provides a baseline application security review for the SmartLLM p
 **Follow-up / TODO:**
 - [ ] Implement security HTTP headers (e.g., `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`) in `next.config.mjs`.
 - [ ] Ensure proper error handling is in place so that stack traces or sensitive internal states are not exposed to users in production.
+
+## 6. Vulnerable and Outdated Components (Dependency Vulnerabilities)
+**Note:** `npm audit` currently identifies vulnerable dependencies, including Clerk, Next.js, Axios, lodash, and protobufjs. Safe upgrades should be reviewed and tested before applying breaking changes.
