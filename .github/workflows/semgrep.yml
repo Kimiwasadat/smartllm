@@ -32,9 +32,6 @@ jobs:
       - name: Run npm audit (high/critical only)
         run: npm audit --audit-level=high || true
 
-      - name: Run Semgrep CI
+      - name: Run Semgrep scan
         # Using the official Docker image to run Semgrep CLI directly
-        run: docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep semgrep ci
-        env:
-          # Optional: SEMGREP_APP_TOKEN can be added to GitHub Secrets to link to Semgrep App
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep semgrep scan --config auto /src
